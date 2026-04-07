@@ -1,0 +1,9 @@
+# db-sync Senkronizasyon Görevleri
+
+# Tüm tabloları senkronize et - Her gün 02:00'de
+0 1 * * * /app/scripts/sync-abys-abone-adres-bilgileri.sh >> /app/logs/sync-abys-abone-adres-bilgileri.log 2>&1
+0 2 * * * /app/scripts/sync-abys-abone-sayac.sh >> /app/logs/sync-abys-abone-sayac.log 2>&1
+0 3 * * * /app/scripts/sync-abys-yol-bilgileri.sh >> /app/logs/sync-abys-yol-bilgileri.log 2>&1
+30 3 * * * /app/scripts/sync-abys-yol-bilgileri-2-emlak.sh >> /app/logs/sync-abys-yol-bilgileri-2-emlak.log 2>&1
+0 4 * * * /app/scripts/sync-sms-gis-building-door.sh >> /app/logs/sync-sms-gis-building-door.log 2>&1
+0 5 * * * /app/scripts/sync-sms-gis-building.sh >> /app/logs/sync-abys-abone-adres-bilgileri.log 2>&1

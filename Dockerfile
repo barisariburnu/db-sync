@@ -1,0 +1,160 @@
+FROM ubuntu:22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set environment variables
+ENV PGCLIENTENCODING=UTF8 \
+    NLS_LANG=AMERICAN_AMERICA.UTF8 \
+    TZ=Europe/Istanbul \
+    PYTHONUNBUFFERED=1
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    libpq-dev \
+    wget \
+    unzip \
+    libaio1 \
+    curl \
+    cron \
+    vim \
+    alien \
+    build-essential \
+    software-properties-common \
+    cmake \
+    libsqlite3-dev \
+    libproj-dev \
+    libcurl4-gnutls-dev \
+    libexpat1-dev \
+    libxerces-c-dev \
+    libgeos-dev \
+    libtiff5-dev \
+    libgeotiff-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libgif-dev \
+    libwebp-dev \
+    libhdf4-alt-dev \
+    libhdf5-dev \
+    libnetcdf-dev \
+    libarmadillo-dev \
+    libxml2-dev \
+    libkml-dev \
+    libspatialite-dev \
+    libfreexl-dev \
+    unixodbc-dev \
+    libcfitsio-dev \
+    libzstd-dev \
+    libblosc-dev \
+    liblcms2-dev \
+    libpcre3-dev \
+    libcrypto++-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (fast Python package manager) and add to PATH
+RUN curl -Ls https://astral.sh/uv/install.sh | sh
+ENV PATH=/root/.local/bin:$PATH
+RUN ln -sf /root/.local/bin/uv /usr/local/bin/uv
+
+# Oracle Instant Client kurulumu - GDAL'dan ÖNCE
+COPY oracle-client/instantclient-basic-linux.x64-21.16.0.0.0dbru.zip /tmp/
+COPY oracle-client/instantclient-sqlplus-linux.x64-21.16.0.0.0dbru.zip /tmp/
+COPY oracle-client/instantclient-sdk-linux.x64-21.16.0.0.0dbru.zip /tmp/
+
+RUN mkdir -p /usr/lib/oracle \
+    && cd /tmp \
+    && unzip -o instantclient-basic-linux.x64-21.16.0.0.0dbru.zip \
+    && unzip -o instantclient-sqlplus-linux.x64-21.16.0.0.0dbru.zip \
+    && unzip -o instantclient-sdk-linux.x64-21.16.0.0.0dbru.zip \
+    && cp -r instantclient_21_16 /usr/lib/oracle/instantclient \
+    && rm -rf instantclient_21_16 \
+    && rm instantclient-*.zip \
+    && cd /usr/lib/oracle/instantclient \
+    && rm -f libclntsh.so libocci.so \
+    && ln -s libclntsh.so.21.1 libclntsh.so \
+    && ln -s libocci.so.21.1 libocci.so \
+    && echo "/usr/lib/oracle/instantclient" > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig
+
+# Oracle environment variables - GDAL build öncesi ayarlanmalı
+ENV ORACLE_HOME=/usr/lib/oracle/instantclient \
+    LD_LIBRARY_PATH=/usr/lib/oracle/instantclient:$LD_LIBRARY_PATH \
+    TNS_ADMIN=/usr/lib/oracle/instantclient \
+    PATH=$PATH:/usr/lib/oracle/instantclient \
+    OCI_HOME=/usr/lib/oracle/instantclient \
+    OCI_LIB_DIR=/usr/lib/oracle/instantclient \
+    OCI_INCLUDE_DIR=/usr/lib/oracle/instantclient/sdk/include
+
+# GDAL sürümünü parametrize et
+ARG GDAL_VERSION=3.8.0
+
+# GDAL'ı Oracle desteğiyle kaynak koddan derle
+RUN cd /tmp \
+    && wget https://github.com/OSGeo/gdal/releases/download/v${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz \
+    && tar -xzf gdal-${GDAL_VERSION}.tar.gz \
+    && cd gdal-${GDAL_VERSION} \
+    && mkdir build && cd build \
+    && cmake .. \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGDAL_USE_ORACLE=ON \
+    -DOracle_ROOT=/usr/lib/oracle/instantclient \
+    -DOracle_INCLUDE_DIR=/usr/lib/oracle/instantclient/sdk/include \
+    -DOracle_LIBRARY=/usr/lib/oracle/instantclient/libclntsh.so \
+    -DGDAL_USE_POSTGRESQL=ON \
+    -DGDAL_USE_GEOS=ON \
+    -DGDAL_USE_GEOTIFF=ON \
+    -DGDAL_USE_CURL=ON \
+    -DGDAL_USE_SQLITE3=ON \
+    -DGDAL_USE_PROJ=ON \
+    && make -j$(nproc) \
+    && make install \
+    && ldconfig \
+    && cd /tmp && rm -rf gdal-${GDAL_VERSION}*
+
+# Python için sembolik link
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Environment variables for GDAL
+ENV GDAL_DATA=/usr/share/gdal \
+    GDAL_DRIVER_PATH=/usr/lib/gdalplugins
+
+# Çalışma dizinini ayarla
+WORKDIR /app
+
+# Uygulama dosyalarini kopyala
+COPY . /app/
+
+# CRLF satir sonlarini duzelt (.env dahil) ve calistirilabilir yap
+RUN sed -i 's/\r$//' /app/.env 2>/dev/null || true \
+    && sed -i 's/\r$//' /app/scripts/sync-abys-abone-adres-bilgileri.sh \
+    && sed -i 's/\r$//' /app/scripts/sync-abys-abone-sayac.sh \
+    && sed -i 's/\r$//' /app/scripts/sync-abys-yol-bilgileri.sh \
+    && sed -i 's/\r$//' /app/scripts/sync-sms-gis-building.sh \
+    && sed -i 's/\r$//' /app/scripts/sync-sms-gis-building-door.sh \
+    && sed -i 's/\r$//' /app/scripts/crontab \
+    && sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/scripts/*.sh /app/entrypoint.sh
+
+# Entrypoint'i root'a kopyala
+RUN cp /app/entrypoint.sh /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Cron job ayarla
+RUN sed -i 's/\r$//' /app/scripts/crontab \
+    && cp /app/scripts/crontab /etc/cron.d/db-sync \
+    && chmod 0644 /etc/cron.d/db-sync \
+    && crontab /etc/cron.d/db-sync
+
+# Log dizinini olustur
+RUN mkdir -p /app/logs
+
+# Environment degiskenlerini cron icin hazirla
+RUN printenv | grep -v "no_proxy" >> /etc/environment
+
+ENTRYPOINT ["/entrypoint.sh"]

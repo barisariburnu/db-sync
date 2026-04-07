@@ -1,0 +1,17 @@
+services:
+  db-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: db-sync
+    env_file:
+      - .env
+    environment:
+      LOG_DIR: /app/logs
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    restart: unless-stopped
+    command: ["/entrypoint.sh"]
+    stdin_open: true
+    tty: true

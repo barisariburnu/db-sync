@@ -1,0 +1,8 @@
+logs/
+.env
+*.bad
+*.log
+*.csv
+*.ctl
+*.par
+*.meta.tsv
