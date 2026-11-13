@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: Dockerfile
     stop_grace_period: 2h
-name: ${COOLIFY_RESOURCE_UUID:?}
+name: ${COOLIFY_RESOURCE_UUID}
 networks:
   default:
     external: true
