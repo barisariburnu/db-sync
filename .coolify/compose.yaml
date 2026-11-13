@@ -1,0 +1,73 @@
+services:
+  db-sync:
+    command: []
+    entrypoint:
+    - /bin/bash
+    - /app/.coolify/start.sh
+    environment:
+      ORACLE_YONCA_HOST: ${DBSYNC_ORACLE_YONCA_HOST}
+      ORACLE_YONCA_PORT: ${DBSYNC_ORACLE_YONCA_PORT}
+      PG_YONCA_PASSWORD: ${DBSYNC_PG_YONCA_PASSWORD}
+      PG_EMLAK_PASSWORD: ${DBSYNC_PG_EMLAK_PASSWORD}
+      PG_YONCA_HOST: ${DBSYNC_PG_YONCA_HOST}
+      PG_EMLAK_DATABASE: ${DBSYNC_PG_EMLAK_DATABASE}
+      PG_EMLAK_HOST: ${DBSYNC_PG_EMLAK_HOST}
+      PG_EMLAK_USER: ${DBSYNC_PG_EMLAK_USER}
+      ORACLE_YONCA_PASSWORD: ${DBSYNC_ORACLE_YONCA_PASSWORD}
+      PG_EMLAK_PORT: ${DBSYNC_PG_EMLAK_PORT}
+      ORACLE_YONCA_USER: ${DBSYNC_ORACLE_YONCA_USER}
+      LOG_DIR: ${DBSYNC_LOG_DIR}
+      PG_YONCA_PORT: ${DBSYNC_PG_YONCA_PORT}
+      ORACLE_YONCA_DATABASE: ${DBSYNC_ORACLE_YONCA_DATABASE}
+      PG_YONCA_USER: ${DBSYNC_PG_YONCA_USER}
+      ORACLE_YONCA_SCHEMA: ${DBSYNC_ORACLE_YONCA_SCHEMA}
+      PG_YONCA_DATABASE: ${DBSYNC_PG_YONCA_DATABASE}
+      PATH: ${DBSYNC_PATH}
+      DEBIAN_FRONTEND: ${DBSYNC_DEBIAN_FRONTEND}
+      PGCLIENTENCODING: ${DBSYNC_PGCLIENTENCODING}
+      NLS_LANG: ${DBSYNC_NLS_LANG}
+      TZ: ${DBSYNC_TZ}
+      PYTHONUNBUFFERED: ${DBSYNC_PYTHONUNBUFFERED}
+      ORACLE_HOME: ${DBSYNC_ORACLE_HOME}
+      LD_LIBRARY_PATH: ${DBSYNC_LD_LIBRARY_PATH}
+      TNS_ADMIN: ${DBSYNC_TNS_ADMIN}
+      OCI_HOME: ${DBSYNC_OCI_HOME}
+      OCI_LIB_DIR: ${DBSYNC_OCI_LIB_DIR}
+      OCI_INCLUDE_DIR: ${DBSYNC_OCI_INCLUDE_DIR}
+      GDAL_DATA: ${DBSYNC_GDAL_DATA}
+      GDAL_DRIVER_PATH: ${DBSYNC_GDAL_DRIVER_PATH}
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: ${COOLIFY_LOGS_PATH}
+      target: /app/logs
+      bind:
+        create_host_path: false
+    image: coolify-local/db-sync:${SOURCE_COMMIT:-latest}
+    pull_policy: never
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - test -s /var/run/crond.pid && kill -0 $(cat /var/run/crond.pid)
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    init: true
+    container_name: db-sync-${COOLIFY_RESOURCE_UUID:?}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    stop_grace_period: 2h
+name: ${COOLIFY_RESOURCE_UUID:?}
+networks:
+  default:
+    external: true
+    name: ${COOLIFY_RESOURCE_UUID:?}
