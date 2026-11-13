@@ -2,9 +2,9 @@
 set -eu
 compose_file=./.coolify/compose.yaml
 build_env=/artifacts/build-time.env
-docker compose --env-file "$build_env" -f "$compose_file" build
-container=$(docker compose --env-file "$build_env" -f "$compose_file" config | sed -n 's/^    container_name: //p')
-project=$(docker compose --env-file "$build_env" -f "$compose_file" config | sed -n 's/^name: //p')
+docker compose --project-directory . --env-file "$build_env" -f "$compose_file" build
+container=$(docker compose --project-directory . --env-file "$build_env" -f "$compose_file" config | sed -n 's/^    container_name: //p')
+project=$(docker compose --project-directory . --env-file "$build_env" -f "$compose_file" config | sed -n 's/^name: //p')
 test "$container" = "db-sync-$project"
 if docker inspect "$container" >/dev/null 2>&1; then
     actual_project=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$container")
