@@ -11,6 +11,7 @@ if docker inspect "$container" >/dev/null 2>&1; then
     actual_service=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.service" }}' "$container")
     test "$actual_project" = "$project"
     test "$actual_service" = 'db-sync'
+    legacy=false
     if ! docker inspect --format '{{json .Config.Entrypoint}}' "$container" | grep -q '/app/.coolify/start.sh'; then
         process_list=$(docker top "$container" -eo pid,comm)
         unexpected=$(printf '%s\n' "$process_list" | tail -n +2 | awk '$2 != "cron" && $2 != "docker-init" {print $2}')
@@ -18,8 +19,15 @@ if docker inspect "$container" >/dev/null 2>&1; then
             echo 'Deployment deferred: the legacy scheduler is running an active job.' >&2
             exit 75
         fi
+        legacy=true
     fi
     # An unlimited graceful stop never escalates to SIGKILL while a data reload is active.
     docker stop --time -1 "$container" >/dev/null
-    test "$(docker inspect --format '{{.State.ExitCode}}' "$container")" = 0
+    code=$(docker inspect --format '{{.State.ExitCode}}' "$container")
+    if test "$legacy" = true; then
+        # An idle legacy cron exits on TERM without a wrapper; active jobs are rejected above.
+        test "$code" = 0 || test "$code" = 143
+    else
+        test "$code" = 0
+    fi
 fi
