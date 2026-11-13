@@ -1,6 +1,5 @@
 services:
   db-sync:
-    command: []
     entrypoint:
     - /bin/bash
     - /app/.coolify/start.sh
