@@ -13,11 +13,13 @@ if docker inspect "$container" >/dev/null 2>&1; then
     test "$actual_service" = 'db-sync'
     legacy=false
     if ! docker inspect --format '{{json .Config.Entrypoint}}' "$container" | grep -q '/app/.coolify/start.sh'; then
+        if test "$(docker inspect --format '{{.State.Running}}' "$container")" = true; then
         process_list=$(docker top "$container" -eo pid,comm)
         unexpected=$(printf '%s\n' "$process_list" | tail -n +2 | awk '$2 != "cron" && $2 != "docker-init" {print $2}')
         if test -n "$unexpected"; then
             echo 'Deployment deferred: the legacy scheduler is running an active job.' >&2
             exit 75
+        fi
         fi
         legacy=true
     fi
