@@ -1,0 +1,3 @@
+
+# Official error reporting SDK
+sentry-sdk==2.75.0

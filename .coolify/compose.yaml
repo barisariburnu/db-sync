@@ -4,6 +4,8 @@ services:
     - /bin/bash
     - /app/.coolify/start.sh
     environment:
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       ORACLE_YONCA_HOST: ${DBSYNC_ORACLE_YONCA_HOST}
       ORACLE_YONCA_PORT: ${DBSYNC_ORACLE_YONCA_PORT}
       PG_YONCA_PASSWORD: ${DBSYNC_PG_YONCA_PASSWORD}
@@ -44,7 +46,7 @@ services:
       target: /app/logs
       bind:
         create_host_path: false
-    image: coolify-local/db-sync:${SOURCE_COMMIT:-latest}
+    image: coolify-local/db-sync:latest
     pull_policy: never
     healthcheck:
       test:

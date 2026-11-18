@@ -6,3 +6,7 @@ logs/
 *.ctl
 *.par
 *.meta.tsv
+
+# Python monitoring/test caches
+__pycache__/
+*.py[cod]

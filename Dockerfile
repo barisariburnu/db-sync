@@ -128,6 +128,9 @@ ENV GDAL_DATA=/usr/share/gdal \
 # Çalışma dizinini ayarla
 WORKDIR /app
 
+COPY requirements.txt /tmp/monitoring-requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/monitoring-requirements.txt
+
 # Uygulama dosyalarini kopyala
 COPY . /app/
 
@@ -158,3 +161,8 @@ RUN mkdir -p /app/logs
 RUN printenv | grep -v "no_proxy" >> /etc/environment
 
 ENTRYPOINT ["/entrypoint.sh"]
+
+# Immutable source metadata follows all expensive build layers.
+ARG MONITORING_SOURCE_REVISION
+ENV SENTRY_RELEASE=db-sync@${MONITORING_SOURCE_REVISION}
+LABEL org.opencontainers.image.revision="${MONITORING_SOURCE_REVISION}"

@@ -8,6 +8,21 @@
 
 set -euo pipefail
 
+# BEGIN MONITORING EXIT HOOK
+# Report one fixed-code job failure; never pass shell output, arguments or data.
+monitoring_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+monitoring_exit() {
+    local status=$1
+    trap - EXIT
+    if [ "$status" -ne 0 ]; then
+        SENTRY_DSN="${SENTRY_DSN:-}" SENTRY_ENVIRONMENT="${SENTRY_ENVIRONMENT:-production}" SENTRY_RELEASE="${SENTRY_RELEASE:-}" \
+            python3 "$monitoring_root/monitoring.py" job-failed sync-sms-gis-building-door >/dev/null 2>&1 || true
+    fi
+    exit "$status"
+}
+trap 'monitoring_exit "$?"' EXIT
+# END MONITORING EXIT HOOK
+
 LOG_FILE=""
 START_TIME=$(date +%s)
 
