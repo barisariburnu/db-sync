@@ -18,3 +18,12 @@ drain `docker stop --time -1`; legacy aktif iş exit75 ve stop yok.
 
 Docker image build, gerçek DB/Oracle/WFS/SSH işlemi, production olay teslimi,
 push ve deploy bu doğrulamada çalıştırılmadı. Production kontrolleri ayrı yürütülür.
+
+## 19 Kasım 2026 — Cron Oracle istemcisi düzeltmesi
+
+İş logları `Missing dependencies: sqlplus` ile bağlantı öncesi sonlanıyordu.
+Container'ın normal ortamında bulunan Oracle istemcisi, cron'un temiz ortamında
+bulunamıyordu. Startup `.env` allowlist'ine yalnız runtime `PATH` eklendi.
+Gerçek writer + temiz Bash child process regresyonu önce exit127 ile RED,
+düzeltme sonrası GREEN; tam test paketi 12/12 PASS ve bağımsız inceleme onayı.
+Testler veritabanına bağlanmaz; SQL, tablo ve aktarım davranışı değiştirilmemiştir.

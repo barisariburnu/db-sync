@@ -33,3 +33,12 @@ SDK otomatik log, trace, profile, session toplamaz.
 
 Sentetik testler: `python3 -m unittest discover -s tests -v`. Gerçek DB/Oracle
 veya iş aktarımı bu testlere ve monitoring-check komutuna dahil değildir.
+
+## Cron çalışma ortamı
+
+Zamanlayıcı `.env` dosyasına container'ın runtime `PATH` değerini de yazar.
+Cron varsayılan olarak `/usr/bin:/bin` kullanır; bu yol Oracle Instant Client
+altındaki `sqlplus` komutunu içermez. İşler mevcut özel izinli `.env` dosyasını
+yükleyerek aynı runtime komut yolunu devralır. Sırlar veya yol değeri loglanmaz.
+Regresyon testi gerçek startup yazıcısını ve temiz cron ortamında child process
+komut çözümlemesini çalıştırır; veritabanına bağlanmaz ve aktarım başlatmaz.
